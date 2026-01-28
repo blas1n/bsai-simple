@@ -1,0 +1,86 @@
+#!/bin/bash
+set -e
+
+echo "BSAI DevContainer Post-Start Setup"
+echo "======================================"
+
+# 0. Configure git safe directory (required for devcontainer)
+# Use --replace-all to avoid duplicates on repeated runs
+if ! git config --global --get-all safe.directory | grep -q "^/workspace$"; then
+    git config --global --add safe.directory /workspace
+    echo "[OK] Git safe directory configured"
+else
+    echo "[OK] Git safe directory already configured"
+fi
+
+# 1. Install uv (fast Python package installer)
+echo "Installing uv..."
+if ! command -v uv &> /dev/null; then
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    # Add uv to PATH immediately
+    export PATH="$HOME/.local/bin:$PATH"
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+    echo "[OK] uv installed successfully"
+else
+    echo "[OK] uv already installed"
+fi
+
+# 2. Ensure uv is in PATH for current session
+export PATH="$HOME/.local/bin:$PATH"
+
+# 3. Create virtual environment if it doesn't exist
+if [ ! -d ".venv" ]; then
+    echo ""
+    echo "Creating virtual environment..."
+    uv venv .venv
+    echo "[OK] Virtual environment created"
+fi
+
+# 4. Activate virtual environment
+source .venv/bin/activate
+
+# 5. Install Python dependencies
+echo ""
+echo "Installing Python dependencies..."
+if [ -f "pyproject.toml" ]; then
+    # Use copy mode to avoid hardlink warnings (host volume vs container filesystem)
+    UV_LINK_MODE=copy uv pip install -e ".[dev]"
+    echo "[OK] Dependencies installed successfully"
+
+    # 6. Set up pre-commit hooks (after dependencies are installed)
+    echo ""
+    echo "Setting up pre-commit hooks..."
+    if [ -f ".pre-commit-config.yaml" ]; then
+        pre-commit install
+        echo "[OK] Pre-commit hooks installed"
+    else
+        echo "[SKIP] .pre-commit-config.yaml not found"
+    fi
+else
+    echo "[SKIP] pyproject.toml not found - will be created in Phase 1"
+fi
+
+# 6. Make sure scripts are executable
+chmod +x .devcontainer/scripts/*.sh 2>/dev/null || true
+
+# 7. Add venv activation to bashrc
+if ! grep -q "source /workspace/.venv/bin/activate" ~/.bashrc; then
+    echo 'source /workspace/.venv/bin/activate' >> ~/.bashrc
+    echo "[OK] Auto-activation added to bashrc"
+fi
+
+echo ""
+echo "======================================"
+echo "[DONE] DevContainer setup complete!"
+echo "======================================"
+echo ""
+echo "Available services:"
+echo "  - Backend API:  http://localhost:18000"
+echo "  - Frontend:     http://localhost:13000"
+echo "  - PostgreSQL:   localhost:5433"
+echo "  - Redis:        localhost:6380"
+echo "  - Keycloak:     http://localhost:8080"
+echo ""
+echo "Langfuse (Cloud): https://cloud.langfuse.com"
+echo "  - Set LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY in .env"
+echo ""

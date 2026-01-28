@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Virtual Environment
+.venv/
+
+# IDE
+.vscode/
+!.vscode/settings.json
+.idea/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# Type/Lint Cache
+.mypy_cache/
+.ruff_cache/
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+
+# Internal docs (Korean, not for commit)
+docs/internal/
+
+# AI Results
+results
